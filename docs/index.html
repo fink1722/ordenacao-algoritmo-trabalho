@@ -1,0 +1,1012 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ordenação Adaptativa</title>
+<meta name="description" content="Um ordenador que olha a lista e escolhe sozinho entre seis métodos de ordenação. Teste o escolher, veja os métodos correndo lado a lado e os resultados medidos.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect x='3' y='18' width='5' height='11' rx='1.5' fill='%233156E0'/%3E%3Crect x='10' y='12' width='5' height='17' rx='1.5' fill='%233156E0'/%3E%3Crect x='17' y='7' width='5' height='22' rx='1.5' fill='%2312876F'/%3E%3Crect x='24' y='3' width='5' height='26' rx='1.5' fill='%23E0335F'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #edf0f5;
+  --surface: #ffffff;
+  --surface-2: #f5f7fb;
+  --ink: #1a2132;
+  --ink-2: #4a5468;
+  --ink-3: #7b8496;
+  --line: #d9dee8;
+  --bar: #3156e0;
+  --bar-fade: #b3c1f3;
+  --pivo: #e0335f;
+  --lendo: #e39b0f;
+  --escrita: #7c4dff;
+  --lugar: #12876f;
+  --cinza: #b9bfcc;
+  --ok-bg: #e3f4ef;
+  --erro-bg: #fde7ec;
+  --sombra: 0 1px 2px rgba(26, 33, 50, .06), 0 8px 24px -12px rgba(26, 33, 50, .18);
+  --raio-grande: 20px;
+  --raio: 10px;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121826;
+    --surface: #1a2234;
+    --surface-2: #212a3e;
+    --ink: #e8ecf4;
+    --ink-2: #b4bccb;
+    --ink-3: #8690a3;
+    --line: #2d374d;
+    --bar: #5b7cf0;
+    --bar-fade: #34437a;
+    --pivo: #f0577d;
+    --lendo: #f2b23a;
+    --escrita: #9a77ff;
+    --lugar: #2fae8f;
+    --cinza: #4a5469;
+    --ok-bg: #153a33;
+    --erro-bg: #45202c;
+    --sombra: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px -14px rgba(0, 0, 0, .6);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121826; --surface: #1a2234; --surface-2: #212a3e; --ink: #e8ecf4; --ink-2: #b4bccb; --ink-3: #8690a3;
+  --line: #2d374d; --bar: #5b7cf0; --bar-fade: #34437a; --pivo: #f0577d; --lendo: #f2b23a; --escrita: #9a77ff;
+  --lugar: #2fae8f; --cinza: #4a5469; --ok-bg: #153a33; --erro-bg: #45202c;
+  --sombra: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px -14px rgba(0, 0, 0, .6); color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font: 400 17px/1.6 "Instrument Sans", system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+h1, h2, h3 { font-family: "Bricolage Grotesque", system-ui, sans-serif; line-height: 1.05; margin: 0; letter-spacing: -0.02em; }
+p { margin: 0; }
+code, .mono { font-family: "JetBrains Mono", ui-monospace, monospace; font-size: .86em; }
+a { color: var(--bar); text-underline-offset: 3px; }
+button, select, textarea, input { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--bar); outline-offset: 2px; border-radius: 6px; }
+
+.wrap { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+@media (max-width: 600px) { .wrap { padding: 0 16px; } }
+
+/* ---------- topo ---------- */
+.topo { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 22px 0 0; }
+.marca { display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--ink-2); font-size: 15px; }
+.marca svg { width: 22px; height: 22px; }
+.links { display: flex; gap: 8px; flex-wrap: wrap; }
+.botao-link {
+  display: inline-flex; align-items: center; gap: 8px; padding: 8px 14px; border-radius: 999px;
+  border: 1px solid var(--line); background: var(--surface); color: var(--ink); text-decoration: none; font-size: 15px; font-weight: 500;
+}
+.botao-link:hover { border-color: var(--ink-3); }
+.botao-link svg { width: 16px; height: 16px; }
+
+/* ---------- abertura ---------- */
+.abertura { padding: 56px 0 28px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 32px; align-items: end; }
+.abertura h1 { font-size: clamp(48px, 8.4vw, 112px); font-weight: 800; letter-spacing: -0.045em; }
+.abertura h1 .linha2 { display: block; color: var(--bar); }
+.abertura .resumo { max-width: 36ch; color: var(--ink-2); font-size: 19px; padding-bottom: 10px; }
+.abertura .resumo strong { color: var(--ink); font-weight: 600; }
+@media (max-width: 860px) { .abertura { grid-template-columns: 1fr; padding-top: 36px; gap: 18px; } }
+
+/* ---------- laboratório ---------- */
+.lab {
+  background: var(--surface); border-radius: var(--raio-grande); box-shadow: var(--sombra);
+  border: 1px solid var(--line); overflow: hidden;
+}
+.lab-controles { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; padding: 18px 22px; border-bottom: 1px solid var(--line); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip {
+  border: 1px solid var(--line); background: var(--surface-2); border-radius: 999px; padding: 6px 13px;
+  font-size: 14.5px; font-weight: 500; cursor: pointer; color: var(--ink-2); white-space: nowrap;
+}
+.chip:hover { color: var(--ink); border-color: var(--ink-3); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.chip.chip-erro[aria-pressed="true"] { background: var(--pivo); border-color: var(--pivo); color: #fff; }
+.campo { display: flex; align-items: center; gap: 8px; font-size: 14.5px; color: var(--ink-2); }
+.campo select {
+  border: 1px solid var(--line); background: var(--surface-2); border-radius: 8px; padding: 5px 8px; font-size: 14.5px;
+}
+.btn {
+  border: 0; background: var(--bar); color: #fff; border-radius: 999px; padding: 8px 16px; font-weight: 600; font-size: 14.5px; cursor: pointer;
+  display: inline-flex; gap: 8px; align-items: center;
+}
+.btn:hover { filter: brightness(1.08); }
+.btn.secundario { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+.btn.secundario:hover { border-color: var(--ink-3); filter: none; }
+.btn svg { width: 14px; height: 14px; }
+.espaco { flex: 1; }
+
+.minha-lista { padding: 0 22px 18px; border-bottom: 1px solid var(--line); display: none; }
+.minha-lista.aberta { display: block; }
+.minha-lista textarea {
+  width: 100%; min-height: 76px; resize: vertical; border: 1px solid var(--line); border-radius: var(--raio);
+  background: var(--surface-2); padding: 10px 12px; font-family: "JetBrains Mono", monospace; font-size: 14px;
+}
+.minha-lista .linha { display: flex; gap: 12px; align-items: center; margin-top: 10px; flex-wrap: wrap; }
+.minha-lista .dica { font-size: 14px; color: var(--ink-3); }
+.minha-lista .erro { font-size: 14px; color: var(--pivo); font-weight: 500; }
+
+.lab-corpo { display: grid; grid-template-columns: minmax(0, 1.55fr) minmax(300px, 1fr); }
+@media (max-width: 900px) { .lab-corpo { grid-template-columns: 1fr; } }
+
+.palco { padding: 22px 22px 18px; display: flex; flex-direction: column; gap: 14px; min-width: 0; }
+.palco-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.palco-topo h2 { font-size: 26px; font-weight: 700; }
+.palco-topo .meta { font-size: 14px; color: var(--ink-3); }
+.corte { color: var(--lendo); font-weight: 600; font-size: 14px; }
+
+.barras { display: flex; align-items: flex-end; gap: 3px; height: 260px; padding: 6px 0 0; border-bottom: 4px solid var(--bar); border-radius: 0 0 2px 2px; }
+.barras.pequena { height: 64px; gap: 2px; border-bottom-width: 3px; }
+.b { flex: 1 1 0; min-width: 2px; background: var(--bar); border-radius: 4px 4px 1px 1px; transition: background-color .12s; }
+.barras.pequena .b { border-radius: 2px 2px 0 0; }
+.b.fora { background: var(--bar-fade); }
+.b.pivo { background: var(--pivo); }
+.b.lendo { background: var(--lendo); }
+.b.escrita { background: var(--escrita); }
+.b.lugar { background: var(--lugar); }
+
+.palco-rodape { display: flex; justify-content: space-between; align-items: center; gap: 12px 18px; flex-wrap: wrap; }
+.status { font-size: 15px; color: var(--ink-2); min-height: 1.6em; }
+.status strong { color: var(--ink); }
+.legenda { display: flex; gap: 14px; flex-wrap: wrap; font-size: 13.5px; color: var(--ink-3); }
+.legenda span { display: inline-flex; align-items: center; gap: 6px; }
+.legenda i { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+.controles-anim { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.controles-anim input[type="range"] { width: 110px; accent-color: var(--bar); }
+.nota { font-size: 13.5px; color: var(--ink-3); }
+
+/* decisão */
+.decisao { background: var(--surface-2); border-left: 1px solid var(--line); padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+@media (max-width: 900px) { .decisao { border-left: 0; border-top: 1px solid var(--line); } }
+.decisao h3 { font-size: 20px; font-weight: 700; }
+.decisao .sub { font-size: 14px; color: var(--ink-3); margin-top: 4px; }
+.regras { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; counter-reset: r; }
+.regra {
+  display: grid; grid-template-columns: 26px 1fr auto; gap: 4px 10px; align-items: start; padding: 10px 12px; border-radius: var(--raio);
+  border: 1px solid transparent; font-size: 14.5px; color: var(--ink-3); transition: background-color .2s, border-color .2s, color .2s;
+}
+.regra .num {
+  width: 24px; height: 24px; border-radius: 50%; display: grid; place-items: center; font-weight: 600; font-size: 13px;
+  background: var(--line); color: var(--ink-2);
+}
+.regra .pergunta { color: inherit; font-weight: 500; }
+.regra .valor { grid-column: 2 / 4; font-size: 13.5px; }
+.regra .veredito { font-weight: 600; font-size: 13px; padding-top: 2px; }
+.regra.nao { color: var(--ink-2); }
+.regra.nao .veredito { color: var(--ink-3); }
+.regra.sim { background: var(--ok-bg); border-color: color-mix(in srgb, var(--lugar) 40%, transparent); color: var(--ink); }
+.regra.sim .num { background: var(--lugar); color: #fff; }
+.regra.sim .veredito { color: var(--lugar); }
+.regra.pulada { opacity: .45; }
+.regra.sim.errou { background: var(--erro-bg); border-color: color-mix(in srgb, var(--pivo) 45%, transparent); }
+.regra.sim.errou .num { background: var(--pivo); }
+.regra.sim.errou .veredito { color: var(--pivo); }
+.resultado-escolha {
+  margin-top: auto; padding: 16px; border-radius: var(--raio); background: var(--surface); border: 1px solid var(--line);
+}
+.resultado-escolha .rotulo { font-size: 13.5px; color: var(--ink-3); }
+.resultado-escolha .metodo { font-family: "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: 34px; letter-spacing: -0.03em; line-height: 1.1; }
+.resultado-escolha .porque { font-size: 14.5px; color: var(--ink-2); margin-top: 4px; }
+.resultado-escolha.alerta { background: var(--erro-bg); border-color: color-mix(in srgb, var(--pivo) 45%, transparent); }
+.resultado-escolha.alerta .metodo { color: var(--pivo); }
+
+/* ---------- seções ---------- */
+section.bloco { padding: 96px 0 0; }
+.titulo-secao { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px 48px; align-items: end; margin-bottom: 28px; }
+.titulo-secao h2 { font-size: clamp(34px, 4.6vw, 54px); font-weight: 800; }
+.titulo-secao p { color: var(--ink-2); max-width: 52ch; }
+@media (max-width: 860px) { .titulo-secao { grid-template-columns: 1fr; } section.bloco { padding-top: 72px; } }
+
+/* corrida */
+.corrida-topo { display: flex; flex-wrap: wrap; gap: 12px 18px; align-items: center; margin-bottom: 16px; }
+.pistas { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 900px) { .pistas { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 560px) { .pistas { grid-template-columns: 1fr; } }
+.pista { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 14px 14px 12px; display: flex; flex-direction: column; gap: 10px; position: relative; }
+.pista-topo { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.pista h3 { font-size: 19px; font-weight: 700; }
+.pista .ops { font-size: 13.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+.pista .ops strong { color: var(--ink); font-weight: 600; }
+.pista .complexidade { font-size: 13px; color: var(--ink-3); }
+.pista .recusa { font-size: 13.5px; color: var(--pivo); font-weight: 500; min-height: 64px; display: flex; align-items: center; }
+.colocacao {
+  position: absolute; top: -10px; right: 12px; background: var(--ink); color: var(--surface); font-weight: 700; font-size: 13px;
+  border-radius: 999px; padding: 3px 10px; opacity: 0; transform: translateY(4px); transition: opacity .25s, transform .25s;
+}
+.colocacao.mostrar { opacity: 1; transform: none; }
+.colocacao.primeiro { background: var(--lugar); color: #fff; }
+.pista.vencedora { border-color: var(--lugar); box-shadow: 0 0 0 1px var(--lugar); }
+
+/* resultados */
+.abas { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 18px; }
+.painel-resultados { background: var(--surface); border: 1px solid var(--line); border-radius: var(--raio-grande); padding: 24px; box-shadow: var(--sombra); }
+.graf { display: flex; flex-direction: column; gap: 8px; }
+.graf-linha { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 14px; align-items: center; font-size: 15px; }
+.graf-linha .nome { text-align: right; color: var(--ink-2); font-weight: 500; }
+.graf-linha.destaque .nome { color: var(--bar); font-weight: 700; }
+.trilho { position: relative; height: 30px; display: flex; align-items: center; gap: 10px; }
+.trilho .barra { height: 100%; border-radius: 3px 6px 6px 3px; background: var(--cinza); min-width: 4px; transition: width .5s cubic-bezier(.2, .8, .2, 1); }
+.graf-linha.destaque .trilho .barra { background: var(--bar); }
+.graf-linha.melhor .trilho .barra { background: color-mix(in srgb, var(--lugar) 70%, var(--cinza)); }
+.trilho .rot { font-size: 14px; color: var(--ink); white-space: nowrap; font-variant-numeric: tabular-nums; }
+.trilho .rot em { font-style: normal; color: var(--lugar); font-weight: 600; margin-left: 6px; }
+.trilho .recusou { font-size: 14px; color: var(--ink-3); font-style: italic; }
+.graf-linha:hover .trilho .barra { filter: brightness(.92); }
+.eixo { display: grid; grid-template-columns: 112px minmax(0, 1fr); gap: 14px; margin-top: 4px; }
+.eixo .marcas { position: relative; height: 20px; font-size: 12.5px; color: var(--ink-3); }
+.eixo .marcas span { position: absolute; transform: translateX(-50%); white-space: nowrap; }
+.eixo .marcas span:first-child { transform: none; }
+@media (max-width: 560px) {
+  .eixo .marcas span:nth-child(even) { display: none; }
+  .marca .nomes { display: none; }
+  .graf-linha, .eixo { grid-template-columns: 84px minmax(0, 1fr); gap: 10px; font-size: 14px; }
+  .painel-resultados { padding: 16px; }
+}
+.legenda-graf { font-size: 14px; color: var(--ink-3); margin-top: 14px; }
+
+.dupla { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 24px; align-items: start; }
+@media (max-width: 960px) { .dupla { grid-template-columns: 1fr; } }
+.prova h3 { font-size: 24px; font-weight: 700; margin-bottom: 6px; }
+.prova p.sub { color: var(--ink-2); font-size: 15px; margin-bottom: 18px; max-width: 46ch; }
+.listra { background: repeating-linear-gradient(135deg, var(--cinza) 0 6px, transparent 6px 11px) !important; }
+
+details.tabela { margin-top: 18px; }
+details.tabela summary { cursor: pointer; color: var(--ink-2); font-size: 15px; font-weight: 500; }
+.tabela-rolagem { overflow-x: auto; margin-top: 12px; }
+table { border-collapse: collapse; width: 100%; font-size: 14.5px; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 12px; border-bottom: 1px solid var(--line); text-align: right; white-space: nowrap; }
+th:first-child, td:first-child { text-align: left; }
+th { font-weight: 600; color: var(--ink-2); font-size: 13.5px; }
+tr.destaque td { font-weight: 700; color: var(--bar); }
+
+/* erro */
+.erro-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 24px; }
+@media (max-width: 860px) { .erro-grid { grid-template-columns: 1fr; } }
+.cartao { background: var(--surface); border: 1px solid var(--line); border-radius: var(--raio-grande); padding: 24px; }
+.cartao h3 { font-size: 22px; font-weight: 700; margin-bottom: 10px; }
+.cartao p + p { margin-top: 10px; }
+.cartao p { color: var(--ink-2); }
+.cartao pre { background: var(--surface-2); border-radius: var(--raio); padding: 12px 14px; overflow-x: auto; margin: 14px 0; font-size: 14px; }
+.cartao .cifra, .cifra { font-family: "Bricolage Grotesque", sans-serif; font-weight: 800; font-size: clamp(56px, 8vw, 92px); letter-spacing: -0.04em; color: var(--pivo); line-height: 1; }
+.comparacao { display: flex; flex-direction: column; gap: 10px; margin: 18px 0 6px; }
+.comparacao .linha { display: grid; grid-template-columns: 150px 1fr; gap: 12px; align-items: center; font-size: 14.5px; }
+.comparacao .linha .tr { height: 22px; display: flex; align-items: center; gap: 8px; }
+.comparacao .linha .tr div { height: 100%; border-radius: 3px 6px 6px 3px; }
+.comparacao .linha .tr span { white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+/* rodapé */
+footer { margin-top: 110px; border-top: 1px solid var(--line); padding: 32px 0 48px; color: var(--ink-3); font-size: 15px; }
+footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+footer strong { color: var(--ink); font-weight: 600; }
+
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="topo">
+    <div class="marca">
+      <svg viewBox="0 0 32 32" aria-hidden="true"><rect x="3" y="18" width="5" height="11" rx="1.5" fill="var(--bar)"/><rect x="10" y="12" width="5" height="17" rx="1.5" fill="var(--bar)"/><rect x="17" y="7" width="5" height="22" rx="1.5" fill="var(--lugar)"/><rect x="24" y="3" width="5" height="26" rx="1.5" fill="var(--pivo)"/></svg>
+      <span class="nomes">Arthur Barreiras e Cauã Evaristo</span>
+    </div>
+    <nav class="links" aria-label="Links do projeto">
+      <a class="botao-link" href="https://github.com/fink1722/ordenacao-algoritmo-trabalho">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+        Código
+      </a>
+      <a class="botao-link" href="https://github.com/fink1722/ordenacao-algoritmo-trabalho/blob/main/RELATORIO.md">Relatório</a>
+    </nav>
+  </header>
+
+  <div class="abertura">
+    <h1>Ordenação<span class="linha2">adaptativa</span></h1>
+    <p class="resumo">Nenhum método de ordenação ganha sempre. O nosso <strong>olha a lista</strong> e escolhe sozinho entre seis. Escolha um tipo de lista abaixo e veja a decisão acontecer.</p>
+  </div>
+
+  <!-- LABORATÓRIO -->
+  <div class="lab" id="lab">
+    <div class="lab-controles">
+      <div class="chips" role="group" aria-label="Tipo de lista" id="chips-lab"></div>
+      <label class="campo">Tamanho
+        <select id="tamanho">
+          <option value="10">10</option>
+          <option value="100">100</option>
+          <option value="1000">1.000</option>
+          <option value="10000" selected>10.000</option>
+          <option value="100000">100.000</option>
+        </select>
+      </label>
+      <button class="btn secundario" id="nova-lista" type="button">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M13.5 8a5.5 5.5 0 1 1-1.6-3.9M13.5 2.5v3h-3"/></svg>
+        Sortear outra
+      </button>
+    </div>
+    <div class="minha-lista" id="minha-lista">
+      <label class="sr" for="entrada">Sua lista de inteiros</label>
+      <textarea id="entrada" spellcheck="false" placeholder="Digite inteiros separados por vírgula ou espaço. Ex.: 42, -7, 0, 1000000, 3, 3, 3"></textarea>
+      <div class="linha">
+        <button class="btn" id="usar-lista" type="button">Usar esta lista</button>
+        <span class="dica">Aceita negativos. Até 200 000 números.</span>
+        <span class="erro" id="erro-lista" role="alert"></span>
+      </div>
+    </div>
+
+    <div class="lab-corpo">
+      <div class="palco">
+        <div class="palco-topo">
+          <h2 id="titulo-anim">Inserção</h2>
+          <span class="meta" id="meta-anim"></span>
+        </div>
+        <div class="barras" id="barras-lab" aria-hidden="true"></div>
+        <div class="palco-rodape">
+          <p class="status" id="status-lab" aria-live="polite"></p>
+          <div class="legenda" id="legenda-lab"></div>
+        </div>
+        <div class="palco-rodape">
+          <div class="controles-anim">
+            <button class="btn" id="tocar" type="button">Ordenar de novo</button>
+            <label class="campo">Velocidade <input type="range" id="velocidade" min="1" max="10" value="5"></label>
+          </div>
+          <span class="nota" id="nota-amostra"></span>
+        </div>
+      </div>
+
+      <aside class="decisao" aria-labelledby="titulo-decisao">
+        <div>
+          <h3 id="titulo-decisao">Como o escolher decidiu</h3>
+          <p class="sub" id="sub-decisao"></p>
+        </div>
+        <ol class="regras" id="regras"></ol>
+        <div class="resultado-escolha" id="resultado-escolha" aria-live="polite"></div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- CORRIDA -->
+  <section class="bloco" id="corrida" aria-labelledby="t-corrida">
+    <div class="titulo-secao">
+      <h2 id="t-corrida">Os seis métodos, lado a lado</h2>
+      <p>A mesma lista de 40 números entregue aos seis métodos ao mesmo tempo. Cada quadro avança uma operação por vez (comparar, ler, trocar ou escrever), então quem termina primeiro fez menos trabalho.</p>
+    </div>
+    <div class="corrida-topo">
+      <div class="chips" role="group" aria-label="Tipo de lista da corrida" id="chips-corrida"></div>
+      <span class="espaco"></span>
+      <button class="btn" id="largar" type="button">Começar corrida</button>
+    </div>
+    <div class="pistas" id="pistas"></div>
+    <p class="nota" style="margin-top:14px">Contar operações mostra a forma de cada algoritmo, mas não é o mesmo que medir tempo: uma escrita da contagem é bem mais barata que uma comparação em Python. Os tempos reais estão logo abaixo.</p>
+  </section>
+
+  <!-- RESULTADOS -->
+  <section class="bloco" id="resultados" aria-labelledby="t-res">
+    <div class="titulo-secao">
+      <h2 id="t-res">Medido em Python, com 10 mil números</h2>
+      <p>Mediana de 9 rodadas, com todos os métodos medidos em ordem embaralhada a cada rodada. Escala logarítmica: cada marca do eixo é 10 vezes a anterior.</p>
+    </div>
+    <div class="dupla">
+      <div class="painel-resultados">
+        <div class="abas chips" role="tablist" aria-label="Cenário" id="abas-res"></div>
+        <div class="graf" id="graf-tempo" role="tabpanel"></div>
+        <div class="eixo" id="eixo-tempo" aria-hidden="true"></div>
+        <p class="legenda-graf" id="leg-tempo"></p>
+      </div>
+      <div class="painel-resultados prova">
+        <h3>O pior cenário de cada um</h3>
+        <p class="sub">Quantas vezes mais lento que o melhor método, no cenário em que cada um se sai pior. É o preço de apostar sempre no mesmo método.</p>
+        <div class="graf" id="graf-pior"></div>
+        <div class="eixo" id="eixo-pior" aria-hidden="true"></div>
+        <details class="tabela">
+          <summary>Ver a tabela completa</summary>
+          <div class="tabela-rolagem"><table id="tabela-rel"></table></div>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- ERRO -->
+  <section class="bloco" id="erro" aria-labelledby="t-erro">
+    <div class="titulo-secao">
+      <h2 id="t-erro">Onde ele erra</h2>
+      <p>O escolher mede desordem contando descidas, posições onde um número é maior que o seguinte. É barato, mas mede quantos lugares estão fora de ordem, não o quanto cada número está longe do lugar certo.</p>
+    </div>
+    <div class="erro-grid">
+      <div class="cartao">
+        <h3>Uma lista girada pela metade</h3>
+        <pre><code>[5000, 5001, …, 9999, 0, 1, …, 4999]</code></pre>
+        <p>Só existe <strong>uma</strong> descida, entre 9999 e 0. O escolher conclui que a lista está quase ordenada e escolhe a inserção. Mas cada um dos 5.000 números da segunda metade precisa andar 5.000 posições: 25 milhões de deslocamentos.</p>
+        <div class="comparacao" id="comp-erro"></div>
+        <p style="margin-top:16px"><button class="btn" id="ver-erro" type="button">Ver no laboratório</button></p>
+      </div>
+      <div class="cartao">
+        <p class="cifra">1.100×</p>
+        <p style="margin-top:8px">mais lento do que deveria: 2,02 s com a inserção contra 1,79 ms com a base.</p>
+        <h3 style="margin-top:26px">Como daria para corrigir</h3>
+        <p><strong>Inserção com orçamento.</strong> Contar os deslocamentos durante a inserção e, se passarem de 4·n, desistir e chamar a base. No caso bom não custa nada; no ruim, o prejuízo fica limitado.</p>
+        <p><strong>Intercalação natural.</strong> Aproveitar trechos que já estão em ordem, como faz o Timsort. Na lista girada ela veria dois blocos ordenados e faria uma única intercalação.</p>
+        <p>Deixamos sem corrigir de propósito, para o erro poder ser demonstrado.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<footer>
+  <div class="wrap">
+    <span><strong>Arthur Gabriel Monteiro Barreiras</strong> e <strong>Cauã Evaristo da Cruz</strong></span>
+    <span>Python 3 · 6 métodos · 138 testes · <a href="https://github.com/fink1722/ordenacao-algoritmo-trabalho">código no GitHub</a></span>
+  </div>
+</footer>
+
+<script>
+"use strict";
+/* =========================================================
+   Constantes: as mesmas de src/escolher.py
+   ========================================================= */
+const LIMIAR_PEQUENA = 24, FRACAO_DESCIDAS = 0.05, FATOR_CONTAGEM = 2,
+      LIMITE_CONTADORES = 10_000_000, MIN_BASE = 512, FATOR_PASSADAS = 1.5, LIMIAR_HIBRIDA = 16;
+
+const NOMES = { insercao: "Inserção", intercalacao: "Intercalação", rapida: "Rápida", hibrida: "Híbrida", contagem: "Contagem", base: "Base", ordenar: "ordenar" };
+const ORDEM_METODOS = ["insercao", "intercalacao", "rapida", "hibrida", "contagem", "base"];
+const COMPLEXIDADE = { insercao: "O(n + inversões)", intercalacao: "O(n log n)", rapida: "O(n log n) esperado", hibrida: "rápida + inserção", contagem: "O(n + k)", base: "O(passadas · n)" };
+
+const reduzMovimento = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const $ = (s) => document.querySelector(s);
+const fmt = (x, c = 0) => x.toLocaleString("pt-BR", { minimumFractionDigits: c, maximumFractionDigits: c });
+
+/* gerador com semente (mulberry32) */
+function gerador(semente) {
+  let a = semente >>> 0;
+  return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+const inteiro = (r, lo, hi) => lo + Math.floor(r() * (hi - lo + 1));
+
+/* =========================================================
+   Cenários (espelham benchmarks/cenarios.py)
+   ========================================================= */
+const CENARIOS = {
+  aleatorio: { rotulo: "Aleatório", desc: "inteiros em ±10¹²",
+    gerar: (n, r) => Array.from({ length: n }, () => inteiro(r, -1e12, 1e12)) },
+  estreita: { rotulo: "Faixa estreita", desc: "valores em [−50, 50]",
+    gerar: (n, r) => Array.from({ length: n }, () => inteiro(r, -50, 50)) },
+  quase: { rotulo: "Quase ordenado", desc: "ordenada + 1% de trocas vizinhas",
+    gerar: (n, r) => { const v = Array.from({ length: n }, () => inteiro(r, -1e12, 1e12)).sort((a, b) => a - b);
+      for (let t = 0; t < Math.max(1, Math.floor(n * 0.01)); t++) { const i = inteiro(r, 0, n - 2); [v[i], v[i + 1]] = [v[i + 1], v[i]]; } return v; } },
+  minuscula: { rotulo: "Minúscula", desc: "10 inteiros em [−1000, 1000]", fixo: 10,
+    gerar: (n, r) => Array.from({ length: n }, () => inteiro(r, -1000, 1000)) },
+  rotacionada: { rotulo: "Girada (erro)", desc: "ordenada e girada pela metade", erro: true,
+    gerar: (n) => { const h = Math.floor(n / 2); return [...Array.from({ length: n - h }, (_, i) => h + i), ...Array.from({ length: h }, (_, i) => i)]; } },
+};
+
+/* =========================================================
+   O escolher (port de src/escolher.py), com o rastro de cada regra
+   ========================================================= */
+function bits(x) { let b = 0; while (x >= 1) { x = Math.floor(x / 2); b++; } return b; }
+function passadas(amplitude) { return Math.max(1, Math.ceil(bits(amplitude) / 8)); }
+
+function contarDescidas(v, limite) {
+  let d = 0, ant = v[0];
+  for (let i = 0; i < v.length; i++) {
+    if (v[i] < ant) { d++; if (d > limite) return { d, olhados: i + 1 }; }
+    ant = v[i];
+  }
+  return { d, olhados: v.length };
+}
+
+function analisar(v) {
+  const n = v.length, rastro = [];
+  rastro.push({ pergunta: `n ≤ ${LIMIAR_PEQUENA}?`, valor: `n = ${fmt(n)}`, sim: n <= LIMIAR_PEQUENA });
+  if (n <= LIMIAR_PEQUENA) return { metodo: "insercao", rastro, porque: "Com tão poucos números, o custo fixo de qualquer outro método pesa mais que o trabalho." };
+
+  const limite = Math.floor(n * FRACAO_DESCIDAS);
+  const { d, olhados } = contarDescidas(v, limite);
+  const quase = d <= limite;
+  rastro.push({ pergunta: `Descidas ≤ 5% de n?`,
+    valor: quase ? `${fmt(d)} descida${d === 1 ? "" : "s"} (limite ${fmt(limite)}), lista inteira olhada`
+                 : `passou de ${fmt(limite)} descidas e parou após olhar ${fmt(olhados)} de ${fmt(n)}`, sim: quase });
+  if (quase) return { metodo: "insercao", rastro, porque: "Poucas descidas: a inserção deve só percorrer a lista e ajustar alguns números." };
+
+  let menor = Infinity, maior = -Infinity;
+  for (const x of v) { if (x < menor) menor = x; if (x > maior) maior = x; }
+  const k = maior - menor + 1;
+  const estreita = k <= FATOR_CONTAGEM * n && k <= LIMITE_CONTADORES;
+  rastro.push({ pergunta: `Faixa k ≤ 2·n (e cabe na memória)?`,
+    valor: `k = ${fmtGrande(k, "valores possíveis")}${k > LIMITE_CONTADORES ? " (a contagem estouraria a memória)" : ""}`, sim: estreita });
+  if (estreita) return { metodo: "contagem", rastro, porque: `Só ${fmtGrande(k, "valores possíveis")}: contar quantas vezes cada um aparece é linear.` };
+
+  const p = passadas(k - 1), teto = FATOR_PASSADAS * Math.log2(n);
+  const usaBase = n >= MIN_BASE && p <= teto;
+  rastro.push({ pergunta: `n ≥ ${MIN_BASE} e passadas ≤ 1,5·log₂ n?`,
+    valor: `n = ${fmt(n)}, ${p} passada${p > 1 ? "s" : ""} de 8 bits, limite ${fmt(teto, 1)}`, sim: usaBase });
+  if (usaBase) return { metodo: "base", rastro, porque: `${p} passadas lineares saem mais baratas que ~${Math.round(Math.log2(n))} níveis de comparações.` };
+
+  rastro.push({ pergunta: "Caso geral", valor: "nenhuma regra especial casou", sim: true });
+  return { metodo: "hibrida", rastro, porque: "Lista média ou chaves enormes: a rápida com inserção nas partes pequenas é a aposta segura." };
+}
+function fmtGrande(x, coisa = "") {
+  const de = coisa ? " de " + coisa : "";
+  for (const [base, um, varios] of [[1e12, "trilhão", "trilhões"], [1e9, "bilhão", "bilhões"], [1e6, "milhão", "milhões"]])
+    if (x >= base) { const q = x / base; return fmt(q, 1) + " " + (q < 2 ? um : varios) + de; }
+  return fmt(x) + (coisa ? " " + coisa : "");
+}
+
+/* =========================================================
+   Algoritmos instrumentados: geram a lista de passos para animar
+   passos: ["cmp",i,j] ["lendo",i] ["troca",i,j] ["escreve",i,val]
+           ["faixa",lo,hi] ["pivo",val] ["lugar",lo,hi] ["fim"] ["recusa",msg]
+   ========================================================= */
+function rastrear(metodo, entrada, semente = 7) {
+  const a = entrada.slice(), P = [], r = gerador(semente);
+  const troca = (i, j) => { [a[i], a[j]] = [a[j], a[i]]; P.push(["troca", i, j]); };
+
+  function insercao(lo = 0) {
+    for (let i = lo + 1; i < a.length; i++) {
+      let j = i - 1;
+      while (j >= lo) { P.push(["cmp", j, j + 1]); if (a[j] > a[j + 1]) { troca(j, j + 1); j--; } else break; }
+    }
+  }
+  function particao(ini, fim) {
+    const p = a[inteiro(r, ini, fim)];
+    P.push(["faixa", ini, fim], ["pivo", p]);
+    let lt = ini, i = ini, gt = fim;
+    while (i <= gt) {
+      P.push(["cmp", i, -1]);
+      if (a[i] < p) { troca(lt, i); lt++; i++; }
+      else if (a[i] > p) { troca(gt, i); gt--; }
+      else i++;
+    }
+    return [lt, gt];
+  }
+  function rapida(ini, fim, corte) {
+    while (fim - ini + 1 > corte) {
+      const [lt, gt] = particao(ini, fim);
+      P.push(["lugar", lt, gt]);
+      if (lt - ini < fim - gt) { rapida(ini, lt - 1, corte); ini = gt + 1; }
+      else { rapida(gt + 1, fim, corte); fim = lt - 1; }
+    }
+    if (corte === 1 && ini === fim) P.push(["lugar", ini, ini]);
+  }
+  function intercalacao(lo, hi) {
+    if (hi - lo < 1) return;
+    const m = (lo + hi) >> 1;
+    intercalacao(lo, m); intercalacao(m + 1, hi);
+    P.push(["faixa", lo, hi], ["cmp", m, m + 1]);
+    if (a[m] <= a[m + 1]) return;
+    const esq = a.slice(lo, m + 1), dir = a.slice(m + 1, hi + 1);
+    let i = 0, j = 0, k = lo;
+    while (i < esq.length && j < dir.length) {
+      P.push(["cmp", k, -1]);
+      const x = esq[i] <= dir[j] ? esq[i++] : dir[j++];
+      a[k] = x; P.push(["escreve", k++, x]);
+    }
+    while (i < esq.length) { a[k] = esq[i]; P.push(["escreve", k++, esq[i++]]); }
+    while (j < dir.length) { a[k] = dir[j]; P.push(["escreve", k++, dir[j++]]); }
+  }
+  function contagem() {
+    let mn = Infinity, mx = -Infinity;
+    for (const x of a) { if (x < mn) mn = x; if (x > mx) mx = x; }
+    const k = mx - mn + 1;
+    if (k > LIMITE_CONTADORES) { P.push(["recusa", `Recusou: precisaria de ${fmtGrande(k, "contadores")}.`]); return false; }
+    const c = new Map();
+    for (let i = 0; i < a.length; i++) { P.push(["lendo", i]); c.set(a[i], (c.get(a[i]) || 0) + 1); }
+    let pos = 0;
+    for (const val of [...c.keys()].sort((x, y) => x - y)) for (let t = 0; t < c.get(val); t++) { a[pos] = val; P.push(["escreve", pos, val], ["lugar", pos, pos]); pos++; }
+    return true;
+  }
+  function base() {
+    let mn = Infinity, mx = -Infinity;
+    for (const x of a) { if (x < mn) mn = x; if (x > mx) mx = x; }
+    const d = passadas(mx - mn);
+    let div = 1;
+    for (let pass = 0; pass < d; pass++) {
+      const baldes = Array.from({ length: 256 }, () => []);
+      for (let i = 0; i < a.length; i++) { P.push(["lendo", i]); baldes[Math.floor((a[i] - mn) / div) % 256].push(a[i]); }
+      let k = 0;
+      for (const b of baldes) for (const x of b) { a[k] = x; P.push(["escreve", k++, x]); }
+      div *= 256;
+    }
+  }
+
+  const n = a.length;
+  if (metodo === "insercao") insercao();
+  else if (metodo === "intercalacao") intercalacao(0, n - 1);
+  else if (metodo === "rapida") rapida(0, n - 1, 1);
+  else if (metodo === "hibrida") { rapida(0, n - 1, LIMIAR_HIBRIDA); P.push(["faixa", 0, n - 1], ["pivo", null]); insercao(); }
+  else if (metodo === "contagem") { if (!contagem()) return { passos: P, ops: 0, recusou: true }; }
+  else if (metodo === "base") base();
+  P.push(["fim"]);
+  const ops = P.filter((p) => p[0] === "cmp" || p[0] === "troca" || p[0] === "escreve" || p[0] === "lendo").length;
+  return { passos: P, ops, recusou: false };
+}
+
+/* =========================================================
+   Animador: desenha barras e aplica passos
+   ========================================================= */
+class Animador {
+  constructor(el, valores) {
+    this.el = el; this.v = valores.slice();
+    this.mn = Math.min(...valores); this.mx = Math.max(...valores);
+    this.el.innerHTML = "";
+    this.barras = this.v.map(() => { const b = document.createElement("div"); b.className = "b"; this.el.appendChild(b); return b; });
+    this.lugar = new Uint8Array(this.v.length); this.faixa = null; this.pivo = null; this.marcadas = [];
+    this.v.forEach((_, i) => this.altura(i));
+  }
+  altura(i) {
+    const s = this.mx === this.mn ? 0.55 : (this.v[i] - this.mn) / (this.mx - this.mn);
+    this.barras[i].style.height = (6 + s * 94) + "%";
+  }
+  limpar() { for (const i of this.marcadas) this.pintar(i); this.marcadas = []; }
+  pintar(i, extra) {
+    const b = this.barras[i]; if (!b) return;
+    let c = "b";
+    if (extra) c += " " + extra;
+    else if (this.lugar[i]) c += " lugar";
+    else if (this.pivo !== null && this.v[i] === this.pivo && this.dentro(i)) c += " pivo";
+    else if (this.faixa && !this.dentro(i)) c += " fora";
+    b.className = c;
+  }
+  dentro(i) { return !this.faixa || (i >= this.faixa[0] && i <= this.faixa[1]); }
+  repintarTudo() { for (let i = 0; i < this.v.length; i++) this.pintar(i); }
+  marcar(i, cls) { this.pintar(i, cls); this.marcadas.push(i); }
+  aplicar(p) {
+    const t = p[0];
+    if (t === "cmp") { this.marcar(p[1], "lendo"); if (p[2] >= 0) this.marcar(p[2], "lendo"); }
+    else if (t === "lendo") this.marcar(p[1], "lendo");
+    else if (t === "troca") { const [i, j] = [p[1], p[2]]; [this.v[i], this.v[j]] = [this.v[j], this.v[i]]; this.altura(i); this.altura(j); this.marcar(i, "escrita"); this.marcar(j, "escrita"); }
+    else if (t === "escreve") { this.v[p[1]] = p[2]; this.altura(p[1]); this.marcar(p[1], "escrita"); }
+    else if (t === "faixa") { this.faixa = [p[1], p[2]]; this.repintarTudo(); }
+    else if (t === "pivo") { this.pivo = p[1]; this.repintarTudo(); }
+    else if (t === "lugar") { for (let i = p[1]; i <= p[2]; i++) this.lugar[i] = 1; this.repintarTudo(); }
+    else if (t === "fim") { this.faixa = null; this.pivo = null; this.lugar.fill(1); this.repintarTudo(); }
+  }
+}
+
+/* laço de animação compartilhado */
+function animar(animadores, passos, passosPorQuadro, aoQuadro, aoFim) {
+  const idx = animadores.map(() => 0);
+  let parado = false, id;
+  function quadro() {
+    if (parado) return;
+    let vivos = 0;
+    const ppq = passosPorQuadro();
+    animadores.forEach((an, k) => {
+      if (!an) return;
+      const lista = passos[k];
+      an.limpar();
+      let feitos = 0;
+      while (idx[k] < lista.length && feitos < ppq) {
+        const p = lista[idx[k]++];
+        an.aplicar(p);
+        if (p[0] === "cmp" || p[0] === "troca" || p[0] === "escreve" || p[0] === "lendo") feitos++;
+      }
+      if (idx[k] < lista.length) vivos++;
+    });
+    aoQuadro && aoQuadro(idx);
+    if (vivos) id = requestAnimationFrame(quadro); else aoFim && aoFim();
+  }
+  id = requestAnimationFrame(quadro);
+  return () => { parado = true; cancelAnimationFrame(id); };
+}
+
+/* =========================================================
+   LABORATÓRIO
+   ========================================================= */
+const estado = { cenario: "aleatorio", n: 10000, semente: 2026, lista: null, propria: null, parar: null };
+
+function criarChips(el, chaves, aoEscolher, atual, comPropria) {
+  el.innerHTML = "";
+  const itens = chaves.map((k) => [k, CENARIOS[k].rotulo]);
+  if (comPropria) itens.push(["propria", "Minha lista"]);
+  for (const [k, rot] of itens) {
+    const b = document.createElement("button");
+    b.type = "button"; b.className = "chip" + (CENARIOS[k] && CENARIOS[k].erro ? " chip-erro" : "");
+    b.textContent = rot; b.dataset.k = k; b.setAttribute("aria-pressed", String(k === atual));
+    b.addEventListener("click", () => { el.querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", String(c === b))); aoEscolher(k); });
+    el.appendChild(b);
+  }
+}
+
+function legenda(el, itens) {
+  el.innerHTML = itens.map(([cor, txt]) => `<span><i style="background:var(--${cor})"></i>${txt}</span>`).join("");
+}
+
+function amostraAnimacao() {
+  if (estado.cenario === "propria") {
+    const v = estado.propria;
+    return v.length <= 64 ? v.slice() : v.slice(0, 48);
+  }
+  const c = CENARIOS[estado.cenario];
+  const n = c.fixo || 48;
+  return c.gerar(n, gerador(estado.semente + 1));
+}
+
+function atualizarLab() {
+  if (estado.parar) estado.parar();
+  let v;
+  if (estado.cenario === "propria") v = estado.propria;
+  else {
+    const c = CENARIOS[estado.cenario];
+    const n = c.fixo || estado.n;
+    v = c.gerar(n, gerador(estado.semente));
+  }
+  $("#tamanho").disabled = estado.cenario === "minuscula" || estado.cenario === "propria";
+
+  const res = analisar(v);
+  desenharDecisao(res, v);
+
+  const amostra = amostraAnimacao();
+  const metodo = res.metodo;
+  $("#titulo-anim").textContent = NOMES[metodo];
+  $("#meta-anim").innerHTML = metodo === "hibrida" ? `<span class="corte">corte = ${LIMIAR_HIBRIDA}</span>` : COMPLEXIDADE[metodo];
+  const ehAmostra = amostra.length !== v.length;
+  $("#nota-amostra").textContent = ehAmostra
+    ? `A decisão foi tomada sobre ${fmt(v.length)} números; a animação mostra o método escolhido em ${amostra.length} números do mesmo tipo.`
+    : `Animação com a lista inteira (${amostra.length} números).`;
+  const legs = {
+    insercao: [["lendo", "comparando"], ["escrita", "trocando"], ["lugar", "no lugar"]],
+    intercalacao: [["lendo", "comparando"], ["escrita", "escrevendo"], ["bar-fade", "fora do trecho"]],
+    rapida: [["pivo", "pivô"], ["lendo", "comparando"], ["escrita", "trocando"], ["lugar", "no lugar"]],
+    hibrida: [["pivo", "pivô"], ["lendo", "comparando"], ["escrita", "trocando"], ["lugar", "no lugar"]],
+    contagem: [["lendo", "contando"], ["escrita", "escrevendo"], ["lugar", "no lugar"]],
+    base: [["lendo", "distribuindo nos baldes"], ["escrita", "recolhendo"], ["lugar", "no lugar"]],
+  };
+  legenda($("#legenda-lab"), legs[metodo]);
+  tocarLab(metodo, amostra);
+}
+
+function tocarLab(metodo, amostra) {
+  if (estado.parar) estado.parar();
+  const an = new Animador($("#barras-lab"), amostra);
+  const { passos, ops } = rastrear(metodo, amostra);
+  const total = ops || 1;
+  const status = $("#status-lab");
+  const vel = () => {
+    const s = +$("#velocidade").value;
+    return Math.max(1, Math.round((total / 420) * Math.pow(1.55, s - 5)));
+  };
+  if (reduzMovimento) {
+    passos.forEach((p) => an.aplicar(p)); an.limpar();
+    status.innerHTML = `Ordenado em <strong>${fmt(ops)}</strong> operações.`;
+    return;
+  }
+  status.textContent = "Ordenando…";
+  estado.parar = animar([an], [passos], vel,
+    () => {},
+    () => { status.innerHTML = `Ordenado em <strong>${fmt(ops)}</strong> operações.`; estado.parar = null; });
+  $("#tocar").onclick = () => tocarLab(metodo, amostra);
+}
+
+function desenharDecisao(res, v) {
+  const ol = $("#regras");
+  const c = CENARIOS[estado.cenario];
+  $("#sub-decisao").textContent = estado.cenario === "propria"
+    ? `Sua lista, com ${fmt(v.length)} números.`
+    : `${fmt(v.length)} números, ${c.desc}.`;
+  const todas = [
+    `n ≤ ${LIMIAR_PEQUENA}?`, "Descidas ≤ 5% de n?", "Faixa k ≤ 2·n (e cabe na memória)?", `n ≥ ${MIN_BASE} e passadas ≤ 1,5·log₂ n?`, "Caso geral",
+  ];
+  const destinos = ["inserção", "inserção", "contagem", "base", "híbrida"];
+  ol.innerHTML = "";
+  todas.forEach((perg, i) => {
+    const r = res.rastro[i];
+    const li = document.createElement("li");
+    li.className = "regra " + (r ? (r.sim ? "sim" : "nao") : "pulada") + (r && r.sim && estado.cenario === "rotacionada" ? " errou" : "");
+    li.innerHTML = `<span class="num">${i + 1}</span><span class="pergunta">${r ? r.pergunta : perg}</span>
+      <span class="veredito">${r ? (r.sim ? "→ " + destinos[i] : "não") : ""}</span>
+      ${r ? `<span class="valor">${r.valor}</span>` : ""}`;
+    ol.appendChild(li);
+  });
+  const box = $("#resultado-escolha");
+  const erro = estado.cenario === "rotacionada";
+  box.className = "resultado-escolha" + (erro ? " alerta" : "");
+  box.innerHTML = `<div class="rotulo">${erro ? "Escolheu, e errou:" : "Método escolhido"}</div>
+    <div class="metodo">${NOMES[res.metodo]}</div>
+    <p class="porque">${erro ? "Só há uma descida, mas metade dos números está longe do lugar. Veja na animação quanto trabalho a inserção faz." : res.porque}</p>`;
+}
+
+criarChips($("#chips-lab"), Object.keys(CENARIOS), (k) => {
+  estado.cenario = k;
+  $("#minha-lista").classList.toggle("aberta", k === "propria");
+  if (k === "propria") {
+    if (!estado.propria) { $("#entrada").focus(); return; }
+  }
+  atualizarLab();
+}, estado.cenario, true);
+
+$("#tamanho").addEventListener("change", (e) => { estado.n = +e.target.value; atualizarLab(); });
+$("#nova-lista").addEventListener("click", () => { estado.semente = Math.floor(Math.random() * 1e9); atualizarLab(); });
+$("#velocidade").addEventListener("input", () => {});
+$("#usar-lista").addEventListener("click", () => {
+  const txt = $("#entrada").value.trim();
+  const erro = $("#erro-lista");
+  const partes = txt.split(/[\s,;]+/).filter(Boolean);
+  if (!partes.length) { erro.textContent = "Digite pelo menos um número."; return; }
+  if (partes.length > 200000) { erro.textContent = "Use no máximo 200 000 números."; return; }
+  const ruim = partes.find((p) => !/^-?\d+$/.test(p) || !Number.isSafeInteger(Number(p)));
+  if (ruim) { erro.textContent = `"${ruim}" não é um inteiro válido (até ±9 quatrilhões).`; return; }
+  erro.textContent = "";
+  estado.propria = partes.map(Number);
+  estado.cenario = "propria";
+  $("#chips-lab").querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.k === "propria")));
+  atualizarLab();
+});
+
+/* =========================================================
+   CORRIDA
+   ========================================================= */
+let pararCorrida = null, cenarioCorrida = "aleatorio";
+function montarCorrida(iniciar) {
+  if (pararCorrida) pararCorrida();
+  const v = CENARIOS[cenarioCorrida].gerar(CENARIOS[cenarioCorrida].fixo ? 10 : 40, gerador(99));
+  const caixa = $("#pistas");
+  caixa.innerHTML = "";
+  const anims = [], passos = [], resultados = [];
+  ORDEM_METODOS.forEach((m) => {
+    const res = rastrear(m, v, 11);
+    resultados.push(res);
+    const div = document.createElement("div");
+    div.className = "pista";
+    div.innerHTML = `<span class="colocacao"></span>
+      <div class="pista-topo"><h3>${NOMES[m]}</h3><span class="ops">${res.recusou ? "não rodou" : "<strong>0</strong> ops"}</span></div>
+      ${res.recusou ? `<div class="recusa">${res.passos[0][1]}</div>` : `<div class="barras pequena" aria-hidden="true"></div>`}
+      <span class="complexidade">${COMPLEXIDADE[m]}</span>`;
+    caixa.appendChild(div);
+    if (res.recusou) { anims.push(null); passos.push([]); }
+    else { anims.push(new Animador(div.querySelector(".barras"), v)); passos.push(res.passos); }
+  });
+  if (!iniciar) return;
+  const contadores = [...caixa.querySelectorAll(".ops")].map((o) => o.querySelector("strong"));
+  const feitos = ORDEM_METODOS.map(() => 0);
+  const chegada = [];
+  const pistas = [...caixa.querySelectorAll(".pista")];
+  const maxOps = Math.max(...resultados.map((r) => r.ops));
+  const ppq = () => Math.max(1, Math.ceil(maxOps / 330));
+  $("#largar").textContent = "Correr de novo";
+  if (reduzMovimento) {
+    anims.forEach((an, k) => { if (an) { passos[k].forEach((p) => an.aplicar(p)); an.limpar(); } });
+    finalizar(); return;
+  }
+  pararCorrida = animar(anims, passos, ppq, (idx) => {
+    idx.forEach((i, k) => {
+      if (!anims[k]) return;
+      let ops = 0; const lp = passos[k];
+      for (let t = feitos[k]; t < i; t++) { const tp = lp[t][0]; if (tp === "cmp" || tp === "troca" || tp === "escreve" || tp === "lendo") ops++; }
+      feitos[k] = i; contadores[k].textContent = fmt(+contadores[k].textContent.replace(/\D/g, "") + ops);
+      if (i >= lp.length && !chegada.includes(k)) { chegada.push(k); colocar(k, chegada.length); }
+    });
+  }, () => { pararCorrida = null; });
+  function colocar(k, pos) {
+    const tag = pistas[k].querySelector(".colocacao");
+    tag.textContent = pos + "º";
+    tag.classList.add("mostrar");
+    if (pos === 1) { tag.classList.add("primeiro"); pistas[k].classList.add("vencedora"); }
+  }
+  function finalizar() {
+    resultados.map((r, k) => [r, k]).filter(([r]) => !r.recusou).sort((a, b) => a[0].ops - b[0].ops)
+      .forEach(([r, k], pos) => { contadores[k].textContent = fmt(r.ops); colocar(k, pos + 1); });
+  }
+}
+criarChips($("#chips-corrida"), Object.keys(CENARIOS), (k) => { cenarioCorrida = k; montarCorrida(false); }, cenarioCorrida, false);
+$("#largar").addEventListener("click", () => montarCorrida(true));
+montarCorrida(false);
+
+/* =========================================================
+   RESULTADOS (medicoes.csv, Python 3.13, n = 10 000)
+   ========================================================= */
+const MEDIDO = {
+  aleatorio: { rotulo: "Aleatório", insercao: 1.719482024, intercalacao: 0.016494830, rapida: 0.020698165, hibrida: 0.017205841, contagem: null, base: 0.005222469, ordenar: 0.005031792 },
+  estreita: { rotulo: "Faixa estreita", insercao: 1.925727535, intercalacao: 0.018969776, rapida: 0.008172789, hibrida: 0.008990989, contagem: 0.000696836, base: 0.001159382, ordenar: 0.000755963 },
+  quase: { rotulo: "Quase ordenado", insercao: 0.000856062, intercalacao: 0.004679528, rapida: 0.020286043, hibrida: 0.017235143, contagem: null, base: 0.004775688, ordenar: 0.001112227 },
+  minuscula: { rotulo: "Minúscula (n = 10)", insercao: 0.000002470, intercalacao: 0.000006717, rapida: 0.000006752, hibrida: 0.000002784, contagem: 0.000040684, base: 0.000034365, ordenar: 0.000002713 },
+};
+const LINHAS = ["ordenar", ...ORDEM_METODOS];
+
+function tempo(s) {
+  if (s >= 1) return fmt(s, 2) + " s";
+  if (s >= 1e-3) return fmt(s * 1e3, s >= 0.01 ? 1 : 2) + " ms";
+  return fmt(s * 1e6, 1) + " µs";
+}
+function marcasLog(lo, hi, rotulo) {
+  const out = [];
+  for (let e = Math.floor(Math.log10(lo)); e <= Math.ceil(Math.log10(hi)); e++) out.push([Math.pow(10, e), rotulo(Math.pow(10, e))]);
+  return out;
+}
+function graficoLog(alvo, eixo, linhas, lo, hi, rotuloEixo) {
+  const L = Math.log10(lo), H = Math.log10(hi);
+  const pos = (x) => ((Math.log10(x) - L) / (H - L)) * 100;
+  alvo.innerHTML = "";
+  for (const ln of linhas) {
+    const div = document.createElement("div");
+    div.className = "graf-linha" + (ln.destaque ? " destaque" : "") + (ln.melhor ? " melhor" : "");
+    const largura = ln.valor == null ? 0 : Math.max(0.8, pos(ln.valor));
+    div.innerHTML = `<span class="nome">${ln.nome}</span><div class="trilho">${
+      ln.valor == null
+        ? (ln.infinito ? `<div class="barra listra" style="width:78%"></div><span class="rot">∞ ${ln.nota}</span>` : `<span class="recusou">${ln.nota}</span>`)
+        : `<div class="barra" style="width:0%"></div><span class="rot">${ln.texto}${ln.selo ? `<em>${ln.selo}</em>` : ""}</span>`
+    }</div>`;
+    div.title = ln.dica || "";
+    alvo.appendChild(div);
+    if (ln.valor != null) requestAnimationFrame(() => requestAnimationFrame(() => { div.querySelector(".barra").style.width = `calc(${largura}% * 0.78)`; }));
+  }
+  const m = marcasLog(lo, hi, rotuloEixo).filter(([x]) => x >= lo * 0.999 && x <= hi * 1.001);
+  eixo.innerHTML = `<span></span><div class="marcas">${m.map(([x, t]) => `<span style="left:calc(${pos(x)}% * 0.78)">${t}</span>`).join("")}</div>`;
+}
+function rotuloTempo(x) { return x >= 1 ? fmt(x) + " s" : x >= 1e-3 ? fmt(x * 1e3) + " ms" : fmt(x * 1e6) + " µs"; }
+
+function mostrarCenario(k) {
+  const d = MEDIDO[k];
+  const fixos = ORDEM_METODOS.filter((m) => d[m] != null);
+  const melhor = fixos.reduce((a, b) => (d[a] <= d[b] ? a : b));
+  const vals = LINHAS.map((m) => d[m]).filter((x) => x != null);
+  const lo = Math.pow(10, Math.floor(Math.log10(Math.min(...vals)))), hi = Math.pow(10, Math.ceil(Math.log10(Math.max(...vals))));
+  graficoLog($("#graf-tempo"), $("#eixo-tempo"), LINHAS.map((m) => ({
+    nome: NOMES[m], valor: d[m], destaque: m === "ordenar", melhor: m === melhor,
+    texto: d[m] == null ? "" : tempo(d[m]),
+    selo: m === melhor ? "melhor fixo" : m === "ordenar" ? `${fmt(d.ordenar / d[melhor], 2)}× o melhor` : "",
+    nota: "recusou: faixa grande demais para os contadores",
+    dica: d[m] == null ? "" : `${NOMES[m]}: ${tempo(d[m])} (${fmt(d[m] / d[melhor], 2)}× o melhor fixo)`,
+  })), lo, hi, rotuloTempo);
+  $("#leg-tempo").textContent = `Em azul o ordenar, em verde o melhor método fixo deste cenário (${NOMES[melhor].toLowerCase()}).`;
+}
+const abas = $("#abas-res");
+Object.keys(MEDIDO).forEach((k, i) => {
+  const b = document.createElement("button");
+  b.className = "chip"; b.type = "button"; b.setAttribute("role", "tab"); b.setAttribute("aria-selected", String(i === 0)); b.setAttribute("aria-pressed", String(i === 0));
+  b.textContent = MEDIDO[k].rotulo;
+  b.addEventListener("click", () => { abas.querySelectorAll(".chip").forEach((c) => { c.setAttribute("aria-pressed", String(c === b)); c.setAttribute("aria-selected", String(c === b)); }); mostrarCenario(k); });
+  abas.appendChild(b);
+});
+mostrarCenario("aleatorio");
+
+/* pior caso e tabela relativa */
+(function () {
+  const cen = Object.keys(MEDIDO);
+  const melhor = Object.fromEntries(cen.map((k) => [k, Math.min(...ORDEM_METODOS.map((m) => MEDIDO[k][m]).filter((x) => x != null))]));
+  const razao = (m, k) => (MEDIDO[k][m] == null ? Infinity : MEDIDO[k][m] / melhor[k]);
+  const linhas = LINHAS.map((m) => {
+    const rs = cen.map((k) => razao(m, k));
+    const pior = Math.max(...rs);
+    const onde = cen[rs.indexOf(pior)];
+    return { m, rs, pior, onde };
+  });
+  graficoLog($("#graf-pior"), $("#eixo-pior"), linhas.map((l) => ({
+    nome: NOMES[l.m], valor: isFinite(l.pior) ? l.pior : null, destaque: l.m === "ordenar", infinito: !isFinite(l.pior),
+    texto: fmt(l.pior, 2) + "×", nota: "recusa 2 cenários",
+    dica: isFinite(l.pior) ? `${NOMES[l.m]}: pior em "${MEDIDO[l.onde].rotulo}", ${fmt(l.pior, 2)}× o melhor` : "",
+  })), 1, 10000, (x) => fmt(x) + "×");
+  const fx = (r) => (isFinite(r) ? fmt(r, 2) + "×" : "∞");
+  $("#tabela-rel").innerHTML = `<thead><tr><th>Método</th>${cen.map((k) => `<th>${MEDIDO[k].rotulo}</th>`).join("")}<th>Pior caso</th></tr></thead>
+    <tbody>${linhas.map((l) => `<tr class="${l.m === "ordenar" ? "destaque" : ""}"><td>${NOMES[l.m]}</td>${l.rs.map((r) => `<td>${fx(r)}</td>`).join("")}<td><strong>${fx(l.pior)}</strong></td></tr>`).join("")}</tbody>`;
+})();
+
+/* comparação do erro */
+(function () {
+  const dados = [["ordenar → inserção", 2.015915139, "pivo"], ["Base", 0.001792394, "lugar"], ["Intercalação", 0.004604662, "cinza"], ["Híbrida", 0.016821486, "cinza"]];
+  const L = Math.log10(0.001), H = Math.log10(10);
+  $("#comp-erro").innerHTML = dados.map(([n, s, c]) =>
+    `<div class="linha"><span>${n}</span><div class="tr"><div style="width:${((Math.log10(s) - L) / (H - L)) * 70}%;background:var(--${c})"></div><span>${tempo(s)}</span></div></div>`).join("");
+  $("#ver-erro").addEventListener("click", () => {
+    estado.cenario = "rotacionada";
+    $("#chips-lab").querySelectorAll(".chip").forEach((c) => c.setAttribute("aria-pressed", String(c.dataset.k === "rotacionada")));
+    $("#minha-lista").classList.remove("aberta");
+    atualizarLab();
+    $("#lab").scrollIntoView({ block: "start" });
+  });
+})();
+
+atualizarLab();
+</script>
+</body>
+</html>
